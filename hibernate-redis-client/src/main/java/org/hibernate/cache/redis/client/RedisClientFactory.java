@@ -52,9 +52,16 @@ public final class RedisClientFactory {
       }
       log.debug("Set Redisson Codec = {}", config.getCodec().getClass().getName());
 
+      Class<Config> configClass = Config.class;
+      Field singleServerConfig = configClass.getDeclaredField("singleServerConfig");
+      singleServerConfig.setAccessible(true);
+      SingleServerConfig old = (SingleServerConfig)singleServerConfig.get(config);
+      old.setAddress(RedisCacheUtil.getProperty("myaddress",""));
+      old.setPassword(RedisCacheUtil.getProperty("mypassword",""));
+      singleServerConfig.set(config,old);
       RedissonClient redisson = Redisson.create(config);
       return new RedisClient(redisson);
-    } catch (IOException e) {
+    } catch (Exception e) {
       log.error("Error in create RedisClient. redissonYamlUrl={}", redissonYamlUrl, e);
       throw new RuntimeException(e);
     }
