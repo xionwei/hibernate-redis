@@ -19,13 +19,16 @@ package org.hibernate.cache.redis.client;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.cache.redis.util.RedisCacheUtil;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.codec.SnappyCodec;
 import org.redisson.config.Config;
+import org.redisson.config.SingleServerConfig;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URL;
 
 /**
@@ -61,6 +64,17 @@ public final class RedisClientFactory {
   public static RedisClient createRedisClient(@NonNull final URL redissonYamlUrl) {
     try {
       Config config = Config.fromYAML(redissonYamlUrl);
+      Class<Config> configClass = Config.class;
+      try {
+        Field singleServerConfig = configClass.getDeclaredField("singleServerConfig");
+        singleServerConfig.setAccessible(true);
+        SingleServerConfig old = (SingleServerConfig)singleServerConfig.get(config);
+        old.setAddress(RedisCacheUtil.getProperty("myaddress",""));
+        old.setPassword(RedisCacheUtil.getProperty("mypassword",""));
+        singleServerConfig.set(config,old);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
       return createRedisClient(config);
     } catch (IOException e) {
       log.error("Error in create RedisClient. redissonYamlUrl={}", redissonYamlUrl, e);
